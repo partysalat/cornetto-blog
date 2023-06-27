@@ -5,11 +5,12 @@ import {CdkStack} from '../lib/cdk-stack';
 import {CdkStackUsEast} from "../lib/cdk-stack-us-east";
 
 const app = new cdk.App();
-const stack = new CdkStackUsEast(app, 'cornetto-blog-cert-lambda', {
-  env: {region: 'us-east-1'},
-})
-new CdkStack(app, 'cornetto-blog', {
-  crossRegionReferences: true,
+const stack = new CdkStack(app, 'cornetto-blog-s3', {
   env: {region: 'eu-west-1'},
-  edgeLambdaVersion: stack.edgeLambdaVersion
 });
+
+new CdkStackUsEast(app, 'cornetto-blog', {
+  crossRegionReferences: true,
+  env: {region: 'us-east-1'},
+  s3Bucket: stack.s3Bucket,
+})
