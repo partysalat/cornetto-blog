@@ -25,16 +25,17 @@ export class CdkStackUsEast extends cdk.Stack {
     })
 
     const edgeLambdaVersion = requestHandlerLambda.currentVersion
-    const domainName = "blog.cornetto.cloud";
+    const domainNames: string[] = ["cornetto.cloud", "www.cornetto.cloud"]
     const certificate = new cdk.aws_certificatemanager.Certificate(this, "certificate", {
-      domainName: domainName,
+      domainName: domainNames[0],
+      subjectAlternativeNames: domainNames.slice(1),
       validation: cdk.aws_certificatemanager.CertificateValidation.fromDns(),
 
     })
 
     const distribution = new cdk.aws_cloudfront.Distribution(this, 'cornetto-blog-assets-distribution', {
       priceClass: PriceClass.PRICE_CLASS_100,
-      domainNames: [domainName],
+      domainNames: domainNames,
       certificate: certificate,
       additionalBehaviors: {
         "/assets/*": {
@@ -52,17 +53,23 @@ export class CdkStackUsEast extends cdk.Stack {
         ]
       },
     })
+    const zone = cdk.aws_route53.HostedZone.fromHostedZoneAttributes(this, 'hostedZone', {
+      zoneName: "cornetto.cloud",
+      hostedZoneId:"ZPOH5O9KUKB55"
+    });
 
-    new cdk.aws_route53.RecordSet(this, "sndRecord", {
-      ttl: Duration.minutes(1),
-      zone: cdk.aws_route53.HostedZone.fromHostedZoneAttributes(this, "hostedZone", {
-        zoneName: "cornetto.cloud",
-        hostedZoneId:"ZPOH5O9KUKB55"
-      }),
-      recordName: domainName,
-      recordType: cdk.aws_route53.RecordType.A,
-      target: cdk.aws_route53.RecordTarget.fromAlias(new cdk.aws_route53_targets.CloudFrontTarget(distribution))
+    domainNames.forEach((domainName)=>{
+      const normalizedDomainName = domainName.replace(/\./g,"");
+      new cdk.aws_route53.RecordSet(this, `record${normalizedDomainName}`, {
+        ttl: Duration.minutes(1),
+        zone: zone,
+        recordName: domainName,
+        recordType: cdk.aws_route53.RecordType.A,
+        target: cdk.aws_route53.RecordTarget.fromAlias(new cdk.aws_route53_targets.CloudFrontTarget(distribution))
+      })
+
     })
+
 
 
   }
