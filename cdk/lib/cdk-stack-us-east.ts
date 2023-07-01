@@ -1,15 +1,17 @@
 import * as cdk from 'aws-cdk-lib';
+import {Duration, RemovalPolicy} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {LambdaEdgeEventType, PriceClass} from "aws-cdk-lib/aws-cloudfront";
 import {Version} from "aws-cdk-lib/aws-lambda";
-import {RemovalPolicy} from "aws-cdk-lib";
 import {Bucket} from "aws-cdk-lib/aws-s3";
 
 type AdditionalProps = {
   s3Bucket: Bucket
 }
+
 export class CdkStackUsEast extends cdk.Stack {
   edgeLambdaVersion: Version;
+
   constructor(scope: Construct, id: string, {s3Bucket, ...props}: AdditionalProps & cdk.StackProps) {
     super(scope, id, props);
 
@@ -23,8 +25,17 @@ export class CdkStackUsEast extends cdk.Stack {
     })
 
     const edgeLambdaVersion = requestHandlerLambda.currentVersion
-    new cdk.aws_cloudfront.Distribution(this, 'cornetto-blog-assets-distribution', {
+    const domainName = "blog.cornetto.cloud";
+    const certificate = new cdk.aws_certificatemanager.Certificate(this, "certificate", {
+      domainName: domainName,
+      validation: cdk.aws_certificatemanager.CertificateValidation.fromDns(),
+
+    })
+
+    const distribution = new cdk.aws_cloudfront.Distribution(this, 'cornetto-blog-assets-distribution', {
       priceClass: PriceClass.PRICE_CLASS_100,
+      domainNames: [domainName],
+      certificate: certificate,
       additionalBehaviors: {
         "/assets/*": {
           origin: new cdk.aws_cloudfront_origins.S3Origin(s3Bucket),
@@ -41,5 +52,18 @@ export class CdkStackUsEast extends cdk.Stack {
         ]
       },
     })
+
+    new cdk.aws_route53.RecordSet(this, "sndRecord", {
+      ttl: Duration.minutes(1),
+      zone: cdk.aws_route53.HostedZone.fromHostedZoneAttributes(this, "hostedZone", {
+        zoneName: "cornetto.cloud",
+        hostedZoneId:"ZPOH5O9KUKB55"
+      }),
+      recordName: domainName,
+      recordType: cdk.aws_route53.RecordType.A,
+      target: cdk.aws_route53.RecordTarget.fromAlias(new cdk.aws_route53_targets.CloudFrontTarget(distribution))
+    })
+
+
   }
 }
