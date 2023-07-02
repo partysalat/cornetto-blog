@@ -14,8 +14,8 @@ export class CdkStackUsEast extends cdk.Stack {
 
   constructor(scope: Construct, id: string, {s3Bucket, ...props}: AdditionalProps & cdk.StackProps) {
     super(scope, id, props);
-
-    const requestHandlerLambda = new cdk.aws_lambda.Function(this, "lambda", {
+    // ==================== Lambda ====================
+    const solidStartLambda = new cdk.aws_lambda.Function(this, "lambda", {
       handler: "index.handler",
       runtime: cdk.aws_lambda.Runtime.NODEJS_18_X,
       code: cdk.aws_lambda.Code.fromAsset("../dist/server"),
@@ -24,7 +24,14 @@ export class CdkStackUsEast extends cdk.Stack {
       }
     })
 
-    const edgeLambdaVersion = requestHandlerLambda.currentVersion
+    const edgeLambdaVersion = solidStartLambda.currentVersion
+
+    // ==================== Rewrite from www to cornetto.cloud ====================
+    const cfFunction = new cdk.aws_cloudfront.Function(this, 'redirectToCornettCloudFunction', {
+      code: cdk.aws_cloudfront.FunctionCode.fromFile({filePath: './redirectToCornetto.js'}),
+    });
+
+    // ==================== CloudFront  + Domain ====================
     const domainNames: string[] = ["cornetto.cloud", "www.cornetto.cloud"]
     const certificate = new cdk.aws_certificatemanager.Certificate(this, "certificate", {
       domainName: domainNames[0],
@@ -45,6 +52,10 @@ export class CdkStackUsEast extends cdk.Stack {
       },
       defaultBehavior: {
         origin: new cdk.aws_cloudfront_origins.S3Origin(s3Bucket),
+        functionAssociations: [{
+          function: cfFunction,
+          eventType: cdk.aws_cloudfront.FunctionEventType.VIEWER_REQUEST,
+        }],
         edgeLambdas: [
           {
             eventType: LambdaEdgeEventType.ORIGIN_REQUEST,
@@ -59,7 +70,7 @@ export class CdkStackUsEast extends cdk.Stack {
     });
 
     domainNames.forEach((domainName)=>{
-      const normalizedDomainName = domainName.replace(/\./g,"");
+      const normalizedDomainName = domainName.replace(/\./,"");
       new cdk.aws_route53.RecordSet(this, `record${normalizedDomainName}`, {
         ttl: Duration.minutes(1),
         zone: zone,
