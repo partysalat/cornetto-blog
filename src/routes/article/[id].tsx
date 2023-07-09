@@ -1,9 +1,10 @@
-import {Title, useParams} from "solid-start";
+import { useParams } from 'solid-start'
+import { type JSX } from 'solid-js'
 
 type Params = {
-  id: string;
+  id: string
 }
-export default function Article() {
-  const params = useParams<Params>();
-  return <div>User {params.id}</div>;
+export default function Article (): JSX.Element {
+  const params = useParams<Params>()
+  return <div>User {params.id}</div>
 }

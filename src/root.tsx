@@ -1,5 +1,5 @@
 // @refresh reload
-import { Suspense } from "solid-js";
+import { type JSX, Suspense } from 'solid-js'
 import {
   A,
   Body,
@@ -10,11 +10,12 @@ import {
   Meta,
   Routes,
   Scripts,
-  Title,
-} from "solid-start";
-import "./root.css";
+  Title
+} from 'solid-start'
+import './root.css'
+import Navigation from '~/components/navigation/Navigation'
 
-export default function Root() {
+export default function Root (): JSX.Element {
   return (
     <Html lang="en">
       <Head>
@@ -25,6 +26,7 @@ export default function Root() {
       <Body>
         <Suspense>
           <ErrorBoundary>
+            <Navigation />
             <A href="/">Index</A>
             <A href="/about">About</A>
             <Routes>
@@ -35,5 +37,5 @@ export default function Root() {
         <Scripts />
       </Body>
     </Html>
-  );
+  )
 }
